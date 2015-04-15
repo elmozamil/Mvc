@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -61,14 +60,14 @@ namespace Microsoft.AspNet.Mvc
             if (selectedFormatter == null)
             {
                 // No formatter supports this.
-                logger.LogVerbose("No output formatter was found to write the response.");
+                logger.LogWarning("No output formatter was found to write the response.");
 
                 context.HttpContext.Response.StatusCode = StatusCodes.Status406NotAcceptable;
                 return;
             }
 
-            logger.LogVerbose(
-                "Selected formatter '{OutputFormatter}' to write the response.", 
+            logger.LogInformation(
+                "Selected output formatter '{OutputFormatter}' to write the response.", 
                 selectedFormatter.GetType().FullName);
 
             if (StatusCode.HasValue)
@@ -88,6 +87,10 @@ namespace Microsoft.AspNet.Mvc
             // or Url path extension mapping). If yes, then ignore content-negotiation and use this content-type.
             if (ContentTypes.Count == 1)
             {
+                logger.LogVerbose(
+                    "Skipped content-negotiation as content type '{ContentType}' is explicitly set for the response.", 
+                    ContentTypes[0]);
+
                 return SelectFormatterUsingAnyAcceptableContentType(formatterContext,
                                                                     formatters,
                                                                     ContentTypes);
@@ -106,6 +109,8 @@ namespace Microsoft.AspNet.Mvc
                     out requestContentType);
                 if (!sortedAcceptHeaderMediaTypes.Any() && requestContentType == null)
                 {
+                    logger.LogVerbose("No information found on request to perform content-negotiation.");
+
                     return SelectFormatterBasedOnTypeMatch(formatterContext, formatters);
                 }
 
@@ -313,6 +318,10 @@ namespace Microsoft.AspNet.Mvc
             {
                 formatters = Formatters;
             }
+
+            logger.LogVerbose(
+                "Available output formatters for writing the response: {OutputFormatters}", 
+                formatters.Select(f => f.GetType().FullName));
 
             return formatters;
         }

@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Microsoft.AspNet.Mvc.Core;
 using Microsoft.AspNet.Mvc.Description;
+using Microsoft.Framework.DependencyInjection;
 using Microsoft.Framework.Internal;
+using Microsoft.Framework.Logging;
 using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.AspNet.Mvc
@@ -127,9 +129,20 @@ namespace Microsoft.AspNet.Mvc
         /// <inheritdoc />
         public virtual bool CanWriteResult([NotNull] OutputFormatterContext context, MediaTypeHeaderValue contentType)
         {
+            var formatterName = this.GetType().FullName;
+            var logger = context.ActionContext.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger(formatterName);
+
             var runtimeType = context.Object == null ? null : context.Object.GetType();
             if (!CanWriteType(context.DeclaredType, runtimeType))
             {
+                logger.LogVerbose(
+                    "Output formatter '{OutputFormatter}' cannot write the response. " +
+                    "Declared type: '{DeclaredType}', Runtime type: '{RuntimeType}'",
+                    formatterName, 
+                    context.DeclaredType?.FullName,
+                    runtimeType?.FullName);
+
                 return false;
             }
 
@@ -153,6 +166,12 @@ namespace Microsoft.AspNet.Mvc
                 context.SelectedContentType = mediaType;
                 return true;
             }
+
+            logger.LogVerbose(
+                "The media type '{ContentType}' did not match any of the supported media types. " +
+                "Supported media types: {SupportedMediaTypes}", 
+                contentType, 
+                SupportedMediaTypes.Select(mt => mt.ToString()));
 
             return false;
         }
